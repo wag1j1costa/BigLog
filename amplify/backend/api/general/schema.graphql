@@ -1,0 +1,51 @@
+# Model para armazenar as credenciais dos Correios
+type CarrierSettings @model @auth(rules: [{allow: owner}]) {
+  id: ID!
+  carrierName: String! # "correios"
+  apiUser: String
+  apiPassword: String
+  contractNumber: String
+  postageCard: String
+  administrativeCode: String
+  isActive: Boolean!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+# Model para registrar as etiquetas geradas
+type ShippingLabel @model @auth(rules: [{allow: owner}]) {
+  id: ID!
+  trackingCode: String!
+  carrier: String! # "correios"
+  recipientName: String!
+  recipientCPF: String
+  recipientAddress: String!
+  recipientCity: String!
+  recipientState: String!
+  recipientZipCode: String!
+  senderName: String!
+  senderAddress: String!
+  senderCity: String!
+  senderState: String!
+  senderZipCode: String!
+  weight: Float
+  height: Float
+  width: Float
+  length: Float
+  serviceType: String! # PAC, SEDEX, etc
+  declaredValue: Float
+  status: String! # created, printed, shipped, delivered, cancelled
+  labelUrl: String
+  createdBy: String! # email do usuário
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+# Model para estatísticas do admin
+type AdminStats @model @auth(rules: [{allow: groups, groups: ["Admins"]}]) {
+  id: ID!
+  totalUsers: Int!
+  totalLabels: Int!
+  labelsByCarrier: AWSJSON # {"correios": 150, "mercadolivre": 50}
+  lastUpdated: AWSDateTime!
+}

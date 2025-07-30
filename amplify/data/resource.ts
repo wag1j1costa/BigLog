@@ -1,17 +1,80 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
-/*== STEP 1 ===============================================================
-The section below creates a Todo database table with a "content" field. Try
-adding a new "isDone" field as a boolean. The authorization rule below
-specifies that any user authenticated via an API key can "create", "read",
-"update", and "delete" any "Todo" records.
-=========================================================================*/
 const schema = a.schema({
-  Todo: a
+  // Model para configurações das transportadoras
+  CarrierSettings: a
     .model({
-      content: a.string(),
+      carrierName: a.string().required(), // "correios", "mercadolivre", etc
+      apiUser: a.string(),
+      apiPassword: a.string(),
+      contractNumber: a.string(),
+      postageCard: a.string(),
+      administrativeCode: a.string(),
+      isActive: a.boolean().required().default(true),
     })
-    .authorization((allow) => [allow.publicApiKey()]),
+    .authorization((allow) => [
+      allow.owner(), // Apenas o dono pode ver/editar
+      allow.groups(["Admins"]) // Admins podem ver/editar tudo
+    ]),
+
+  // Model para as etiquetas geradas
+  ShippingLabel: a
+    .model({
+      trackingCode: a.string().required(),
+      carrier: a.string().required(), // "correios", "mercadolivre", etc
+      
+      // Dados do destinatário
+      recipientName: a.string().required(),
+      recipientCPF: a.string(),
+      recipientAddress: a.string().required(),
+      recipientCity: a.string().required(),
+      recipientState: a.string().required(),
+      recipientZipCode: a.string().required(),
+      
+      // Dados do remetente
+      senderName: a.string().required(),
+      senderAddress: a.string().required(),
+      senderCity: a.string().required(),
+      senderState: a.string().required(),
+      senderZipCode: a.string().required(),
+      
+      // Dimensões e peso
+      weight: a.float(),
+      height: a.float(),
+      width: a.float(),
+      length: a.float(),
+      
+      // Informações do serviço
+      serviceType: a.string().required(), // PAC, SEDEX, etc
+      declaredValue: a.float(),
+      status: a.string().required().default("created"), // created, printed, shipped, delivered, cancelled
+      labelUrl: a.string(),
+      
+      createdBy: a.string().required(), // email do usuário
+    })
+    .authorization((allow) => [
+      allow.owner(), // Usuário vê suas próprias etiquetas
+      allow.groups(["Admins"]) // Admins veem todas
+    ]),
+
+  // Model para estatísticas do admin
+  AdminStats: a
+    .model({
+      totalUsers: a.integer().required().default(0),
+      totalLabels: a.integer().required().default(0),
+      labelsByCarrier: a.json(), // {"correios": 150, "mercadolivre": 50}
+      lastUpdated: a.datetime(),
+    })
+    .authorization((allow) => [
+      allow.groups(["Admins"]) // Apenas admins podem acessar
+    ]),
+
+  // Remova ou comente o Todo model se não precisar mais
+  // Todo: a
+  //   .model({
+  //     content: a.string(),
+  //   })
+  //   .authorization((allow) => [allow.publicApiKey()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -19,39 +82,9 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: "apiKey",
-    // API Key is used for a.allow.public() rules
+    defaultAuthorizationMode: "userPool", // Mudando para autenticação de usuário
     apiKeyAuthorizationMode: {
       expiresInDays: 30,
     },
   },
 });
-
-/*== STEP 2 ===============================================================
-Go to your frontend source code. From your client-side code, generate a
-Data client to make CRUDL requests to your table. (THIS SNIPPET WILL ONLY
-WORK IN THE FRONTEND CODE FILE.)
-
-Using JavaScript or Next.js React Server Components, Middleware, Server 
-Actions or Pages Router? Review how to generate Data clients for those use
-cases: https://docs.amplify.aws/gen2/build-a-backend/data/connect-to-API/
-=========================================================================*/
-
-/*
-"use client"
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
-
-const client = generateClient<Schema>() // use this Data client for CRUDL requests
-*/
-
-/*== STEP 3 ===============================================================
-Fetch records from the database and use them in your frontend component.
-(THIS SNIPPET WILL ONLY WORK IN THE FRONTEND CODE FILE.)
-=========================================================================*/
-
-/* For example, in a React component, you can use this snippet in your
-  function's RETURN statement */
-// const { data: todos } = await client.models.Todo.list()
-
-// return <ul>{todos.map(todo => <li key={todo.id}>{todo.content}</li>)}</ul>
